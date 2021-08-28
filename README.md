@@ -42,3 +42,7 @@ Currently it is a very simple implementation which assumes some things which cou
 * `rsync` exists on host and workers
 * `julia` exists and will use that
 * Checks `nthreads()` on host and start that many processes on each worker
+
+## Contributors
+
+The idea is based on a script doing a similar thing that I got from Mattias Fält and Johan Ruuskanen, so credit to them for the idea and the basic execution.
