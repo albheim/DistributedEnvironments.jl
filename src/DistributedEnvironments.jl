@@ -30,7 +30,7 @@ macro initcluster(nodes)
     return _initcluster(nodes)
 end
 
-function _initcluster(nodes::Symbol)
+function _initcluster(nodes)
     quote
         cluster = collect($(esc(nodes)))
 
