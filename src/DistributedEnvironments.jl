@@ -14,6 +14,8 @@ The setup will copy the local project and manifest files as well as copying all
 packages that are added to the env using `dev` to corresponding location on the 
 remote machines.
 
+Needs to be called from top level since the macro includes imports.
+
 # Example
 ```julia
 using RemoteSync, Distributed
@@ -32,15 +34,18 @@ function _initcluster(nodes::Symbol)
     quote
         cluster = collect($(esc(nodes)))
 
+        # Cleanup?
+        # rmprocs(workers())
+
         # Sync local packages and environment files to all nodes
         synchronize(cluster)
 
         addprocs(
-            # map(node -> (node, 1), cluster), 
-            map(node -> (node, :auto), cluster), 
+            map(node -> (node, 1), cluster), 
+            # map(node -> (node, :auto), cluster), 
             topology=:master_worker, 
             tunnel=true, 
-            max_parallel=4*length(cluster), # TODO good value? figure out cpus?
+            max_parallel=length(cluster), 
         ) 
 
         # Activate and instantiate on all targets
@@ -48,16 +53,15 @@ function _initcluster(nodes::Symbol)
         @everywhere Pkg.activate($(Pkg.project().path))
         @everywhere Pkg.instantiate()
 
-        # cores = length(Sys.cpu_info())
-        # addprocs(
-        #     map(node -> (node, cores - 1), cluster), 
-        #     topology=:master_worker, 
-        #     tunnel=true, 
-        #     max_parallel=4*length(cluster), # TODO good value? figure out cpus?
-        # ) 
-        # @everywhere import Pkg
-        # @everywhere Pkg.activate($(Pkg.project().path))
-        # @everywhere Pkg.instantiate()
+        cores = length(Sys.cpu_info())
+        addprocs(
+            map(node -> (node, cores - 1), cluster), 
+            topology=:master_worker, 
+            tunnel=true, 
+            max_parallel=cores*length(cluster), 
+        ) 
+        @everywhere import Pkg
+        @everywhere Pkg.activate($(Pkg.project().path))
     end
 end
 
