@@ -3,6 +3,13 @@
 This is a package to simplify using the distributed functionalities in julia by supplying a
 way to synchronize the local environment to all workers.
 
+
+It looks at the current environment and checks which packages have local paths associated with them.
+It will copy all of those packages as well as the current `Project.toml` and `Manifest.toml` to the 
+corresponding locations on the worker machines.
+
+It then starts workers on each machine equal to the number of threads available on the current node.
+
 ## Installation
 
 Currently it is not registred so you can install it with the url.
@@ -35,14 +42,15 @@ Task (done) ...
 julia> @initcluster nodes 
 ```
 
-## Notes
+## TODO
 
-Currently it is a very simple implementation which assumes some things which could be improved.
-* Same directory structure can be created on workers
-* `rsync` exists on host and workers
-* `julia` exists and will use that
-* Checks `nthreads()` on host and start that many processes on each worker
+Currently it is a very simple implementation making some not perfect assumptions.
+
+* Same directory structure needed on all nodes (allow for one structure on host and one on workers?)
+* `rsync` exists on host and workers (allow for choise between scp/rsync other?)
+* `julia` exists and will use that (allow to set julia executable)
+* Checks `nthreads()` on host and start that many processes on each worker (use `:auto` for `addprocs`, but need to fix the precompile problems)
 
 ## Contributors
 
-The idea is based on a script doing a similar thing that I got from Mattias Fält and Johan Ruuskanen, so credit to them for the idea and the basic execution.
+Mattias Fält and Johan Ruuskanen created a script doing distributed environment syncing at the Dept. of Control in Lund, and that was used as the base for this package.
