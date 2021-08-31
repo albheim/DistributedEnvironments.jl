@@ -27,19 +27,32 @@ using Distributed, DistributedEnvironments
 nodes = ["10.0.0.1", "otherserver"]
 @initcluster nodes
 
-# As long as SomePackage was in the local environment this should now work
-@everywhere using SomePackage 
+@everywhere using SomePackage
 ...
 ```
-
-If you are in a REPL and want to rerun this after some changes, 
-you should remove all workers first so they can be synced and re-added.
-
+For example, one could run hyperparameter optimization using the `@phyperopt` macro from [Hypteropt.jl](https://github.com/baggepinnen/Hyperopt.jl)
 ```julia
-julia> rmprocs(workers())
-Task (done) ...
+... # As above
+@everywhere using Hyperopt, Flux, MLDatasets, Statistics
+@everywhere MNIST.download(i_accept_the_terms_of_use=true)
 
-julia> @initcluster nodes 
+ho = @phyperopt for i=100, fun = [tanh, σ, relu], units = [16, 64, 256], hidden = 1:5, epochs = 1:7
+    train_x, train_y = MNIST.traindata()
+    test_x,  test_y  = MNIST.testdata()
+    model = Chain([
+        flatten; Dense(784, units, fun);
+        [Dense(units, units, fun) for _ in 1:hidden];
+        Dense(units, 10); softmax;
+    ]...)
+    loss(data) = Flux.Losses.mse(model(data.x), data.y)
+    Flux.@epochs epochs Flux.train!(
+        loss, 
+        Flux.params(model), 
+        Flux.DataLoader((x=train_x, y=Flux.onehotbatch(train_y, 0:9)), batchsize=16, shuffle=true), 
+        ADAM()
+    )
+    mean(Flux.onecold(model(test_x), 0:9) .== test_y)
+end
 ```
 
 ## TODO
