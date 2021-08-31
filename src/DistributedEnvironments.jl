@@ -37,7 +37,7 @@ function _initcluster(nodes)
         length(cluster) > 0 || throw(ArgumentError("no servers supplied, nodes=$cluster"))
 
         # 1 is host, if it is in workers it is the only one. Otherwise remove all workers.
-        if 1 ∉ workers()
+        if 1 ∉ workers()
             rmprocs(workers())
         end
 
