@@ -34,34 +34,47 @@ function _initcluster(nodes)
     quote
         cluster = collect($(esc(nodes)))
 
-        # Cleanup?
-        # rmprocs(workers())
+        length(cluster) > 0 || throw(ArgumentError("no servers supplied, nodes=$cluster"))
+
+        # 1 is host, if it is in workers it is the only one. Otherwise remove all workers.
+        if 1 ∉ workers()
+            rmprocs(workers())
+        end
 
         # Sync local packages and environment files to all nodes
         synchronize(cluster)
 
+        # Add single worker on each node to precompile
         addprocs(
             map(node -> (node, 1), cluster), 
-            # map(node -> (node, :auto), cluster), 
             topology=:master_worker, 
             tunnel=true, 
             max_parallel=length(cluster), 
         ) 
 
         # Activate and instantiate on all targets
-        @everywhere import Pkg
-        @everywhere Pkg.activate($(Pkg.project().path))
-        @everywhere Pkg.instantiate()
+        @everywhere begin
+            import Pkg
+            Pkg.activate($(Pkg.project().path))
+            Pkg.instantiate()
+            println("Precompilation done.")
+        end
 
-        cores = length(Sys.cpu_info())
+        # Remove precompile workers
+        rmprocs(workers())
+
+        # Add one worker per thread on each node in the cluster
         addprocs(
-            map(node -> (node, cores - 1), cluster), 
+            map(node -> (node, :auto), cluster), 
             topology=:master_worker, 
             tunnel=true, 
-            max_parallel=cores*length(cluster), 
+            max_parallel=24*length(cluster), # TODO what should this be?
         ) 
-        @everywhere import Pkg
-        @everywhere Pkg.activate($(Pkg.project().path))
+        @everywhere begin
+            import Pkg
+            Pkg.activate($(Pkg.project().path))
+        end
+        println("All workers added and set up.")
     end
 end
 
@@ -90,8 +103,9 @@ function synchronize(cluster)
 end
 
 function rsync(path, target)
+    run(`ssh -q -t $(target) mkdir -p $(dirname(path))`) # Make sure path exists
     if isfile(path)
-        run(`rsync -e ssh $(path) $(target):$(path)`) # Copy
+        run(`rsync -ea ssh $(path) $(target):$(path)`) # Copy
     else
         run(`rsync -re ssh --delete $(path)/ $(target):$(path)`) # Copy
     end
