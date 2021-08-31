@@ -105,7 +105,7 @@ end
 function rsync(path, target)
     run(`ssh -q -t $(target) mkdir -p $(dirname(path))`) # Make sure path exists
     if isfile(path)
-        run(`rsync -ea ssh $(path) $(target):$(path)`) # Copy
+        run(`rsync -e ssh $(path) $(target):$(path)`) # Copy
     else
         run(`rsync -re ssh --delete $(path)/ $(target):$(path)`) # Copy
     end
