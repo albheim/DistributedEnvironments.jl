@@ -1,14 +1,13 @@
 # DistributedEnvironments
 
-This is a package to simplify using the distributed functionalities in julia by supplying a
-way to synchronize the local environment to all workers.
+This package provides a simple way to sync a local development environment to a cluster of workers using the distributed functionalities in julia. 
 
-
+The functionality is exported through the macro `@initcluster` which takes a list of machines accessible through ssh (see `addprocs` in `Distributed.jl` for more information).
 It looks at the current environment and checks which packages have local paths associated with them.
-It will copy all of those packages as well as the current `Project.toml` and `Manifest.toml` to the 
-corresponding locations on the worker machines.
+Those packages as well as the current `Project.toml` and `Manifest.toml` will then be copied to the 
+corresponding locations on the added machines.
 
-It then starts workers on each machine equal to the number of threads available on the current node.
+Workers equal to the number of the available threads are then added on each machine, and the environment is activated for each of them. 
 
 ## Installation
 
@@ -19,7 +18,7 @@ Currently it is not registred so you can install it with the url.
 
 ## Example
 
-Setup assumes you are in the environment you want to clone and you have `DistributedEnvironments` installed.
+Make sure the current active environment is the one that should be copied.
 
 ```julia
 using Distributed, DistributedEnvironments
@@ -30,6 +29,7 @@ nodes = ["10.0.0.1", "otherserver"]
 @everywhere using SomePackage
 ...
 ```
+
 For example, one could run hyperparameter optimization using the `@phyperopt` macro from [Hypteropt.jl](https://github.com/baggepinnen/Hyperopt.jl)
 ```julia
 ... # As above
@@ -66,4 +66,4 @@ Currently it is a very simple implementation making some not perfect assumptions
 
 ## Contributors
 
-Mattias Fält and Johan Ruuskanen created a script doing distributed environment syncing at the Dept. of Automatic Control in Lund, and that was used as the base for this package.
+Mattias Fält and Johan Ruuskanen created a script for doing distributed environment syncing at the Dept. of Automatic Control in Lund which was used as the base for this package.
