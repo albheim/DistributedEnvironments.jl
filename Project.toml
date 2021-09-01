@@ -1,6 +1,6 @@
 name = "DistributedEnvironments"
 uuid = "e6ba4677-9f99-4ce8-87c8-721beef79281"
-authors = ["Albin Heimerson <albheim@hotmail.com> and contributors"]
+authors = ["Albin Heimerson <albheim@hotmail.com>, Mattias Fält and Johan Ruuskanen"]
 version = "0.1.0"
 
 [deps]
