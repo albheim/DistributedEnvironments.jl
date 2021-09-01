@@ -58,7 +58,8 @@ end
 
 Currently it is a very simple implementation making some not perfect assumptions.
 
-* Same directory structure needed on all nodes (allow for one structure on host and one on workers?)
+* Same directory structure needed on all nodes for now
+    * Allow for supplying a `project` folder which all dev packages and env files are added to. Modify Manifest to update paths. Could be problematic with nested packages?
 * `rsync` exists on host and workers (allow for choise between scp/rsync other?)
 * `julia` exists and will use that (allow to set julia executable)
 * Check if we can create a SSHManager object and keep that alive to have acces to individual machines, would allow for either running `@everywhere` or something like `@allmachines` to only run once on each machine (downloading dataset, precompiling)
