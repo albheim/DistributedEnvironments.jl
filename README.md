@@ -3,11 +3,10 @@
 This package provides a simple way to sync a local development environment to a cluster of workers using the distributed functionalities in julia. 
 
 The functionality is exported through the macro `@initcluster` which takes a list of machines accessible through ssh (see `addprocs` in `Distributed.jl` for more information).
-It looks at the current environment and checks which packages have local paths associated with them.
-Those packages as well as the current `Project.toml` and `Manifest.toml` will then be copied to the 
-corresponding locations on the added machines.
+It looks at the active environment and takes packages with local paths associated to them, i.e. `dev` packages,
+as well as the `Project.toml` and `Manifest.toml` and copies them to the corresponding locations on the added machines.
 
-Workers equal to the number of the available threads are then added on each machine, and the environment is activated for each of them. 
+Each machine then have workers equal to the number of the available threads added, and the environment is activated for each of them. 
 
 ## Installation
 
@@ -64,6 +63,7 @@ Currently it is a very simple implementation making some not perfect assumptions
 * `julia` exists and will use that (allow to set julia executable)
 * Check if we can create a SSHManager object and keep that alive to have acces to individual machines, would allow for either running `@everywhere` or something like `@allmachines` to only run once on each machine (downloading dataset, precompiling)
 * Should it rather reexport `Distributed` since it will likely never be used without it?
+* So far no testing, but not really sure how to do that in a good way since the only functionality needs ssh and other machines...
 
 ## Contributors
 
