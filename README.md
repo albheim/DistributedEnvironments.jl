@@ -63,6 +63,7 @@ Currently it is a very simple implementation making some not perfect assumptions
 * `rsync` exists on host and workers (allow for choise between scp/rsync other?)
 * `julia` exists and will use that (allow to set julia executable)
 * Check if we can create a SSHManager object and keep that alive to have acces to individual machines, would allow for either running `@everywhere` or something like `@allmachines` to only run once on each machine (downloading dataset, precompiling)
+* Should it rather reexport `Distributed` since it will likely never be used without it?
 
 ## Contributors
 
