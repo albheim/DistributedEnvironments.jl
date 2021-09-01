@@ -62,8 +62,8 @@ Currently it is a very simple implementation making some not perfect assumptions
 * Same directory structure needed on all nodes (allow for one structure on host and one on workers?)
 * `rsync` exists on host and workers (allow for choise between scp/rsync other?)
 * `julia` exists and will use that (allow to set julia executable)
-* Checks `nthreads()` on host and start that many processes on each worker (use `:auto` for `addprocs`, but need to fix the precompile problems)
+* Check if we can create a SSHManager object and keep that alive to have acces to individual machines, would allow for either running `@everywhere` or something like `@allmachines` to only run once on each machine (downloading dataset, precompiling)
 
 ## Contributors
 
-Mattias Fält and Johan Ruuskanen created a script doing distributed environment syncing at the Dept. of Control in Lund, and that was used as the base for this package.
+Mattias Fält and Johan Ruuskanen created a script doing distributed environment syncing at the Dept. of Automatic Control in Lund, and that was used as the base for this package.
