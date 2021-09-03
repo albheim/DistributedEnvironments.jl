@@ -41,26 +41,29 @@ function _initcluster(nodes)
             rmprocs(workers())
         end
 
+        # Check status of machines
+        status(cluster)
+
         # Sync local packages and environment files to all nodes
         synchronize(cluster)
 
-        # Add single worker on each node to precompile
+        # Add single worker on each machine to precompile
         addprocs(
             map(node -> (node, 1), cluster), 
-            topology=:master_worker, 
-            tunnel=true, 
-            max_parallel=length(cluster), 
+            topology = :master_worker, 
+            tunnel = true, 
+            exeflags = "--project=$(Base.active_project())",
+            max_parallel = length(cluster), 
         ) 
 
-        # Activate and instantiate on all targets
+        # Instantiate environment on all machines
         @everywhere begin
             import Pkg
-            Pkg.activate($(Pkg.project().path))
             Pkg.instantiate()
-            println("Precompilation done.")
         end
 
         # Remove precompile workers
+        # TODO should be able to keep them and add the right amount, maybe SSHManager?
         rmprocs(workers())
 
         # Add one worker per thread on each node in the cluster
@@ -68,13 +71,10 @@ function _initcluster(nodes)
             map(node -> (node, :auto), cluster), 
             topology=:master_worker, 
             tunnel=true, 
+            exeflags = "--project=$(Base.active_project())",
             max_parallel=24*length(cluster), # TODO what should this be?
         ) 
-        @everywhere begin
-            import Pkg
-            Pkg.activate($(Pkg.project().path))
-        end
-        println("All workers added and set up.")
+        println("All workers initialized.")
     end
 end
 
@@ -117,26 +117,29 @@ end
 #     run(`ssh -q -t $(target) rm -rf $(path)`) # Delete old
 #     run(`scp -r -q $(path) $(target):$(path)`) # Copy
 # end
-# 
-# function status(cluster::Vector{String})
-#     calc_cpu = "awk '{u=\$2+\$4; t=\$2+\$4+\$5; if (NR==1){u1=u; t1=t;} else print (\$2+\$4-u1) * 100 / (t-t1) \"%\"; }' <(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)"
-# 
-#     connection_error = []
-#     for node in cluster
-#         printstyled("Checking machine $(node):\n", bold=true, color=:magenta)
-#         try
-#             run(`ssh -q -t $(m) who \&\& $calc_cpu \&\& nproc`)
-#         catch
-#             connection_error = vcat(connection_error, node)
-#         end
-#     end
-# 
-#     if !isempty(connection_error)
-#         println("Failed to connect to the following machines:") for node in connection_error
-#             println("\t $(node)")
-#         end
-#     end
-# end
+ 
+function status(cluster::Vector{String})
+    calc_cpu = "awk '{u=\$2+\$4; t=\$2+\$4+\$5; if (NR==1){u1=u; t1=t;} else print (\$2+\$4-u1) * 100 / (t-t1) \"%\"; }' <(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)"
+
+    connection_error = []
+    for node in cluster
+        printstyled("Checking machine $(node):\n", bold=true, color=:magenta)
+        try
+            run(`ssh -q -t $(node) who \&\& $calc_cpu`)
+        catch
+            connection_error = vcat(connection_error, node)
+        end
+    end
+
+    filter!(x -> x ∉ connection_error, cluster)
+
+    if !isempty(connection_error)
+        println("Failed to connect to the following machines:") 
+        for node in connection_error
+            println("\t $(node)")
+        end
+    end
+end
 
 
 end
