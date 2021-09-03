@@ -36,20 +36,26 @@ For example, one could run hyperparameter optimization using the `@phyperopt` ma
 @everywhere MNIST.download(i_accept_the_terms_of_use=true)
 
 ho = @phyperopt for i=100, fun = [tanh, σ, relu], units = [16, 64, 256], hidden = 1:5, epochs = 1:7
+    # Read data (already downloaded)
     train_x, train_y = MNIST.traindata()
     test_x,  test_y  = MNIST.testdata()
+    # Create model based on optimization parameters
     model = Chain([
-        flatten; Dense(784, units, fun);
+        flatten; 
+        Dense(784, units, fun);
         [Dense(units, units, fun) for _ in 1:hidden];
-        Dense(units, 10); softmax;
+        Dense(units, 10); 
+        softmax;
     ]...)
     loss(data) = Flux.Losses.mse(model(data.x), data.y)
+    # Train
     Flux.@epochs epochs Flux.train!(
         loss, 
         Flux.params(model), 
         Flux.DataLoader((x=train_x, y=Flux.onehotbatch(train_y, 0:9)), batchsize=16, shuffle=true), 
         ADAM()
     )
+    # Return test score
     mean(Flux.onecold(model(test_x), 0:9) .== test_y)
 end
 ```
@@ -61,7 +67,7 @@ Currently it is a very simple implementation making some not perfect assumptions
 * Same directory structure needed on all nodes for now
     * Allow for supplying a `project` folder which all dev packages and env files are added to. Modify Manifest to update paths. Could be problematic with nested packages?
 * `rsync` exists on host and workers (allow for choise between scp/rsync other?)
-* `julia` exists and will use that (allow to set julia executable)
+* allow to set addprocs keywords, such as julia executable, env vars...?
 * Check if we can create a SSHManager object and keep that alive to have acces to individual machines, would allow for either running `@everywhere` or something like `@allmachines` to only run once on each machine (downloading dataset, precompiling)
 * Should it rather reexport `Distributed` since it will likely never be used without it?
 * So far no testing, but not really sure how to do that in a good way since the only functionality needs ssh and other machines...
