@@ -36,7 +36,7 @@ nodes = ["10.0.0.1", "otherserver"]
 For example, one could run hyperparameter optimization using the `@phyperopt` macro from [Hypteropt.jl](https://github.com/baggepinnen/Hyperopt.jl)
 ```julia
 ... # Initial setup as above
-@everywhere using Hypteropt, Flux, MLDatasets, Statistics
+@everywhere using Hyperopt, Flux, MLDatasets, Statistics
 @eachmachine MNIST.download(i_accept_the_terms_of_use=true)
 
 ho = @phyperopt for i=30, fun = [tanh, σ, relu], units = [16, 64, 256], hidden = 1:5, epochs = 1:7
