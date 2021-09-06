@@ -39,7 +39,7 @@ For example, one could run hyperparameter optimization using the `@phyperopt` ma
 @everywhere using Hypteropt, Flux, MLDatasets, Statistics
 @eachmachine MNIST.download(i_accept_the_terms_of_use=true)
 
-ho = @phyperopt for i=100, fun = [tanh, σ, relu], units = [16, 64, 256], hidden = 1:5, epochs = 1:7
+ho = @phyperopt for i=30, fun = [tanh, σ, relu], units = [16, 64, 256], hidden = 1:5, epochs = 1:7
     # Read data (already downloaded)
     train_x, train_y = MNIST.traindata()
     test_x,  test_y  = MNIST.testdata()
