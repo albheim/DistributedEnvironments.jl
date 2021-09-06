@@ -1,6 +1,6 @@
 module DistributedEnvironments
 
-export @initcluster
+export @initcluster, @eachmachine, @everywhere
 
 using Distributed, Pkg
 
@@ -18,7 +18,7 @@ Needs to be called from top level since the macro includes imports.
 
 # Example
 ```julia
-using RemoteSync, Distributed
+using DistributedEnvironments
 
 ips = ["10.0.0.1", "10.0.0.2"]
 @initcluster ips
@@ -64,6 +64,7 @@ function _initcluster(nodes)
 
         # Remove precompile workers
         # TODO should be able to keep them and add the right amount, maybe SSHManager?
+        # Or maybe not, good to have restart of all machines after precompile since sometimes it hangs there.
         rmprocs(workers())
 
         # Add one worker per thread on each node in the cluster
@@ -75,6 +76,23 @@ function _initcluster(nodes)
             max_parallel=24*length(cluster), # TODO what should this be?
         ) 
         println("All workers initialized.")
+    end
+end
+
+"""
+    @eachmachine expr
+
+Similar to `@everywhere`, but only runs on one worker per machine.
+Can be used for things like precompiling, downloading datasets or similar.
+"""
+macro eachmachine(expr)
+    return _eachmachine(expr)
+end
+
+function _eachmachine(expr)
+    machinepids = unique(id -> Distributed.get_bind_addr(id), procs())
+    quote 
+        @everywhere $machinepids $expr
     end
 end
 
@@ -111,12 +129,12 @@ function rsync(path, target)
     end
 end
 
-# function scp(path, target)
-#     dir = isfile(path) ? dirname(path) : path
-#     run(`ssh -q -t $(target) mkdir -p $(dir)`) # Make sure path exists
-#     run(`ssh -q -t $(target) rm -rf $(path)`) # Delete old
-#     run(`scp -r -q $(path) $(target):$(path)`) # Copy
-# end
+function scp(path, target)
+    dir = isfile(path) ? dirname(path) : path
+    run(`ssh -q -t $(target) mkdir -p $(dir)`) # Make sure path exists
+    run(`ssh -q -t $(target) rm -rf $(path)`) # Delete old
+    run(`scp -r -q $(path) $(target):$(path)`) # Copy
+end
  
 function status(cluster::Vector{String})
     calc_cpu = "awk '{u=\$2+\$4; t=\$2+\$4+\$5; if (NR==1){u1=u; t1=t;} else print (\$2+\$4-u1) * 100 / (t-t1) \"%\"; }' <(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)"
@@ -125,7 +143,7 @@ function status(cluster::Vector{String})
     for node in cluster
         printstyled("Checking machine $(node):\n", bold=true, color=:magenta)
         try
-            run(`ssh -q -t $(node) who \&\& $calc_cpu`)
+            run(`ssh -q -t $(node) who \&\& $calc_cpu \&\& julia --version`)
         catch
             connection_error = vcat(connection_error, node)
         end
