@@ -14,28 +14,35 @@ downloading datasets.
 
 ## Installation
 
-Currently it is not registred so you can install it with the url.
 ```julia
-] add https://github.com/albheim/DistributedEnvironments.jl
+julia> ] add DistributedEnvironments
 ```
 
-## Example
+## Usage
 
 Make sure the current active environment is the one that should be copied.
 
 ```julia
 using DistributedEnvironments
 
-nodes = ["10.0.0.1", "otherserver"]
-@initcluster nodes
+machines = ["10.0.0.1", "otherserver"]
+@initcluster machines                           # Copies environment and sets up workers on all machines
 
-@everywhere using SomePackage
+@everywhere using DelimitedFiles                # Want this loaded on all machines
+@eachmachine download("somepage.com/somedata.csv")  # If each worker wants same data we only need to download once per machine
+@everywhere data = readdlm("somedata.csv", ',') # Want to read the data everywhere
 ...
 ```
 
-For example, one could run hyperparameter optimization using the `@phyperopt` macro from [Hypteropt.jl](https://github.com/baggepinnen/Hyperopt.jl)
+## Example
+
+One could for example run hyperparameter optimization using the `@phyperopt` macro from [Hypteropt.jl](https://github.com/baggepinnen/Hyperopt.jl)
 ```julia
-... # Initial setup as above
+using DistributedEnvironments
+
+machines = ["10.0.0.1", "otherserver"]
+@initcluster machines 
+
 @everywhere using Hyperopt, Flux, MLDatasets, Statistics
 @eachmachine MNIST.download(i_accept_the_terms_of_use=true)
 
