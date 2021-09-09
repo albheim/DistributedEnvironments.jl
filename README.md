@@ -77,6 +77,7 @@ Currently it is a very simple implementation making some not perfect assumptions
 
 * Same directory structure needed on all nodes for now
     * Allow for supplying a `project` folder which all dev packages and env files are added to. Modify Manifest to update paths. Could be problematic with nested packages?
+* Do something with depot path?
 * `rsync` exists on host and workers (allow for choise between scp/rsync other?)
 * rsync with multicast?
 * Allow to set addprocs keywords, such as julia executable, env vars...?

@@ -2,7 +2,20 @@ module DistributedEnvironments
 
 export @initcluster, @eachmachine, @everywhere
 
-using Distributed, Pkg
+using Distributed, Pkg, MacroTools
+
+
+"""
+Allows for kwargs with macro, looks for additional args and splits them on =
+"""
+function preprocess_args(args)
+    kwargs = Dict{Symbol, Any}()
+    for arg in args
+        @capture(arg, param_ = value_) || throw(ArgumentError("wrong syntax for argument $(arg)"))
+        kwargs[param] = value
+    end
+    kwargs
+end
 
 
 """
@@ -26,11 +39,12 @@ ips = ["10.0.0.1", "10.0.0.2"]
 @everywhere using SomePackage
 ...
 """
-macro initcluster(nodes)
-    return _initcluster(nodes)
+macro initcluster(nodes, args...)
+    kwargs = preprocess_args(args)
+    return _initcluster(nodes; kwargs...)
 end
 
-function _initcluster(nodes)
+function _initcluster(nodes; status=false, sync=true)
     quote
         cluster = collect($(esc(nodes)))
 
@@ -42,30 +56,33 @@ function _initcluster(nodes)
         end
 
         # Check status of machines
-        status(cluster)
+        $(status) && status(cluster)
 
-        # Sync local packages and environment files to all nodes
-        synchronize(cluster)
+        # Sync and instantiate (does precompilation)
+        if $(sync)
+            # Sync local packages and environment files to all nodes
+            sync_env(cluster)
 
-        # Add single worker on each machine to precompile
-        addprocs(
-            map(node -> (node, 1), cluster), 
-            topology = :master_worker, 
-            tunnel = true, 
-            exeflags = "--project=$(Base.active_project())",
-            max_parallel = length(cluster), 
-        ) 
+            # Add single worker on each machine to precompile
+            addprocs(
+                map(node -> (node, 1), cluster), 
+                topology = :master_worker, 
+                tunnel = true, 
+                exeflags = "--project=$(Base.active_project())",
+                max_parallel = length(cluster), 
+            ) 
 
-        # Instantiate environment on all machines
-        @everywhere begin
-            import Pkg
-            Pkg.instantiate()
+            # Instantiate environment on all machines
+            @everywhere begin
+                import Pkg
+                Pkg.instantiate()
+            end
+
+            # Remove precompile workers
+            # TODO should be able to keep them and add the right amount, maybe SSHManager?
+            # Or maybe not, good to have restart of all machines after precompile since sometimes it hangs there.
+            rmprocs(workers())
         end
-
-        # Remove precompile workers
-        # TODO should be able to keep them and add the right amount, maybe SSHManager?
-        # Or maybe not, good to have restart of all machines after precompile since sometimes it hangs there.
-        rmprocs(workers())
 
         # Add one worker per thread on each node in the cluster
         addprocs(
@@ -96,7 +113,7 @@ function _eachmachine(expr)
     end
 end
 
-function synchronize(cluster)
+function sync_env(cluster)
     proj_path = dirname(Pkg.project().path)
     deps = Pkg.dependencies()
     # (:name, :version, :tree_hash, :is_direct_dep, :is_pinned, :is_tracking_path, :is_tracking_repo, :is_tracking_registry, :git_revision, :git_source, :source, :dependencies)
