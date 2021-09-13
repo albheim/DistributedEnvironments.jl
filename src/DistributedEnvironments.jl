@@ -19,13 +19,18 @@ end
 
 
 """
-    @initcluster ips
+    @initcluster ips [worker_procs=:auto] [sync=true] [status=false]
 
 Takes a list of ip-strings and sets up the current environment on these machines.
 The machines should be reachable using ssh from the machine running the command.
 The setup will copy the local project and manifest files as well as copying all
 packages that are added to the env using `dev` to corresponding location on the 
 remote machines.
+
+Additional arguments:
+* `worker_procs` - Integer or :auto (default), how many workers are added on each machine.
+* `sync` - Whether or not to sync the local environment (default is `true`) before adding the workers.
+* `status` - Whether or not to show a short status (current users, cpu utilization, julia version) for each machine and remove any machine that does not connect. Default is `false`.
 
 Needs to be called from top level since the macro includes imports.
 
@@ -44,7 +49,7 @@ macro initcluster(nodes, args...)
     return _initcluster(nodes; kwargs...)
 end
 
-function _initcluster(nodes; status=false, sync=true, nprocs=:auto)
+function _initcluster(nodes; status=false, sync=true, worker_procs=:auto)
     quote
         cluster = collect($(esc(nodes)))
 
@@ -86,7 +91,7 @@ function _initcluster(nodes; status=false, sync=true, nprocs=:auto)
 
         # Add one worker per thread on each node in the cluster
         addprocs(
-            map(node -> (node, nprocs), cluster), 
+            map(node -> (node, $(worker_procs)), cluster), 
             topology=:master_worker, 
             tunnel=true, 
             exeflags = "--project=$(Base.active_project())",
