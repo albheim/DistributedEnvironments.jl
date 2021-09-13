@@ -44,7 +44,7 @@ macro initcluster(nodes, args...)
     return _initcluster(nodes; kwargs...)
 end
 
-function _initcluster(nodes; status=false, sync=true)
+function _initcluster(nodes; status=false, sync=true, nprocs=:auto)
     quote
         cluster = collect($(esc(nodes)))
 
@@ -86,7 +86,7 @@ function _initcluster(nodes; status=false, sync=true)
 
         # Add one worker per thread on each node in the cluster
         addprocs(
-            map(node -> (node, :auto), cluster), 
+            map(node -> (node, nprocs), cluster), 
             topology=:master_worker, 
             tunnel=true, 
             exeflags = "--project=$(Base.active_project())",
