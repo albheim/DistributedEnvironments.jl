@@ -1,6 +1,6 @@
 module DistributedEnvironments
 
-export @initcluster, @eachmachine, @everywhere
+export @initcluster, @eachmachine, @everywhere, cluster_status
 
 using Distributed, Pkg, MacroTools
 
@@ -61,7 +61,7 @@ function _initcluster(nodes; status=false, sync=true, worker_procs=:auto)
         end
 
         # Check status of machines
-        $(status) && status(cluster)
+        $(status) && cluster_status(cluster)
 
         # Sync and instantiate (does precompilation)
         if $(sync)
@@ -112,11 +112,14 @@ macro eachmachine(expr)
 end
 
 function _eachmachine(expr)
-    machinepids = unique(id -> Distributed.get_bind_addr(id), procs())
+    machinepids = get_unique_machine_ids()
     quote 
         @everywhere $machinepids $expr
     end
 end
+
+get_unique_machine_ids() = unique(id -> Distributed.get_bind_addr(id), procs())
+get_unique_machine_ips() = unique(map(id -> Distributed.get_bind_addr(id), procs()))
 
 function sync_env(cluster)
     proj_path = dirname(Pkg.project().path)
@@ -157,8 +160,13 @@ function scp(path, target)
     run(`ssh -q -t $(target) rm -rf $(path)`) # Delete old
     run(`scp -r -q $(path) $(target):$(path)`) # Copy
 end
- 
-function status(cluster::Vector{String})
+
+"""
+    cluster_status!(cluster)
+
+Run a status check on each machine in the list and remove any machines not reachable.
+"""
+function cluster_status!(cluster::Vector{String})
     calc_cpu = "awk '{u=\$2+\$4; t=\$2+\$4+\$5; if (NR==1){u1=u; t1=t;} else print (\$2+\$4-u1) * 100 / (t-t1) \"%\"; }' <(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)"
 
     connection_error = []
@@ -181,5 +189,13 @@ function status(cluster::Vector{String})
     end
 end
 
+"""
+    cluster_status()
+
+Run a status check on each machine in the running cluster.
+
+Prints current users, current cpu utilization and current julia version.
+"""
+cluster_status() = cluster_status!(get_unique_machine_ips())
 
 end
