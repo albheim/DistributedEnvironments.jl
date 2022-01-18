@@ -126,20 +126,16 @@ function sync_env(cluster)
     deps = Pkg.dependencies()
     # (:name, :version, :tree_hash, :is_direct_dep, :is_pinned, :is_tracking_path, :is_tracking_repo, :is_tracking_registry, :git_revision, :git_source, :source, :dependencies)
 
-    for node in cluster
-        printstyled("Replicating local environment on machine $(node):\n", bold=true, color=:magenta)
-
-        println("Copying environment files to target:")
-        println("\tProject.toml")
+    Threads.@threads for node in cluster
         rsync("$(proj_path)/Project.toml", node)
-        println("\tManifest.toml")
+        println("Worker $(node): Copied Project.toml")
         rsync("$(proj_path)/Manifest.toml", node)
+        println("Worker $(node): Copied Manifest.toml")
 
-        println("Copying local projects to target:")
         for (id, package) in deps
             if package.is_tracking_path
-                println("\t$(package.name)")
                 rsync(package.source, node)
+                println("Worker $(node): Copied $(package.name)")
             end
         end
     end
@@ -148,9 +144,9 @@ end
 function rsync(path, target)
     run(`ssh -q -t $(target) mkdir -p $(dirname(path))`) # Make sure path exists
     if isfile(path)
-        run(`rsync -e ssh $(path) $(target):$(path)`) # Copy
+        run(`rsync -ue ssh $(path) $(target):$(path)`) # Copy
     else
-        run(`rsync -re ssh --delete $(path)/ $(target):$(path)`) # Copy
+        run(`rsync -rue ssh --delete $(path)/ $(target):$(path)`) # Copy
     end
 end
 
