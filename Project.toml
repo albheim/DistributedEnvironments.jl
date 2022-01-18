@@ -1,7 +1,7 @@
 name = "DistributedEnvironments"
 uuid = "e6ba4677-9f99-4ce8-87c8-721beef79281"
 authors = ["Albin Heimerson <albheim@hotmail.com>, Mattias Fält and Johan Ruuskanen"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
